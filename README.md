@@ -25,31 +25,19 @@ run in the browser.
 
 ## How it works
 
-The image is segmented inside a Web Worker with ONNX Runtime Web, using one
-of two models:
+The page uses [`@imgly/background-removal`](https://github.com/imgly/background-removal-js),
+which runs an IS-Net segmentation model with ONNX Runtime Web.
 
-| Browser | Model | Download (once) |
-| --- | --- | --- |
-| WebGPU with `shader-f16` (current Chrome, Edge, and others) | [BiRefNet-lite](https://github.com/ZhengPeng7/BiRefNet) (MIT), fp16, from [Hugging Face](https://huggingface.co/onnx-community/BiRefNet_lite-ONNX) | ~115 MB |
-| No WebGPU, or WebGPU fails | IS-Net via [`@imgly/background-removal`](https://github.com/imgly/background-removal-js), from IMG.LY's CDN (`staticimgly.com`) | ~88 MB + runtime |
-
-BiRefNet is clearly more accurate (hair, thin parts, no stray background
-objects), but it only fits in memory on the GPU, so the CPU keeps IS-Net.
-
-1. The model is downloaded once and kept in the browser's Cache Storage.
-   Before BiRefNet is loaded, `src/lib/onnx-webgpu.js` rewrites a few graph
-   nodes (no change in output) so they run on ONNX Runtime's WebGPU backend.
-2. The browser downscales the image to 1024 × 1024 with high-quality
-   filtering, the model predicts a mask, and the browser scales the mask back
-   to the original size.
-3. The mask is cleaned up (`src/lib/refine-mask.js`): faint haze becomes
-   transparent, near-opaque pixels become opaque, and background colour is
-   taken out of soft edges such as hair and fur (Blur-Fusion foreground
-   estimation).
+1. On the first use, the model and the ONNX Runtime binaries are downloaded
+   from IMG.LY's CDN (`staticimgly.com`). The browser caches them.
+2. The image is decoded and segmented inside a Web Worker on your device.
+3. The mask is cleaned up (`src/lib/refine-mask.js`): faint background haze
+   and small stray patches are removed, the subject is made solid, and
+   background colour is taken out of soft edges such as hair and fur.
 4. The resulting cut-out is shown on a checkerboard and can be saved as PNG.
 
-Only the model and runtime files are fetched from the network. The image
-itself never leaves the browser.
+Only the model files are fetched from the network. The image itself never
+leaves the browser.
 
 ## Getting started
 
@@ -94,10 +82,7 @@ These values are built into the page, so rebuild after changing them.
 4. Optional: set `VITE_SOURCE_URL` and `VITE_MAIN_SITE_URL` under
    **Settings → Environment Variables**, then redeploy.
 
-`vercel.json` sets long-lived caching for the hashed files in `dist/assets/`,
-and the `Cross-Origin-Opener-Policy` / `Cross-Origin-Embedder-Policy`
-headers that let ONNX Runtime use several CPU threads. Set the same headers
-on other hosts (the dev and preview servers already do).
+`vercel.json` sets long-lived caching for the hashed files in `dist/assets/`.
 
 ### Other hosts
 
@@ -112,9 +97,8 @@ Notes:
 - Files in `dist/assets/` have content hashes in their names, so they can be
   cached for a long time. Keep `index.html` uncached so new releases are
   picked up.
-- If you add a Content Security Policy, allow `https://staticimgly.com`,
-  `https://huggingface.co` and `https://*.hf.co` in `connect-src`, and allow
-  `blob:` and `'wasm-unsafe-eval'` for scripts.
+- If you add a Content Security Policy, allow `https://staticimgly.com` in
+  `connect-src`, and allow `blob:` and `'wasm-unsafe-eval'` for scripts.
 
 ## Project structure
 
@@ -141,8 +125,7 @@ src/
     useBackgroundRemoval.js    Image, job and result state
   lib/
     remover.js                 Worker client, progress, errors
-    remover.worker.js          Picks a model, runs it, applies the mask
-    onnx-webgpu.js             Makes the BiRefNet graph WebGPU-friendly
+    remover.worker.js          Runs @imgly/background-removal
     refine-mask.js             Mask clean-up and edge colour correction
     format.js                  File size, file names, downloads
     theme.js                   Theme storage

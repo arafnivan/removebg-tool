@@ -33,20 +33,8 @@ function licenseFiles() {
   };
 }
 
-/**
- * Cross-origin isolation lets ONNX Runtime use several CPU threads (it needs
- * SharedArrayBuffer). "credentialless" still allows the cross-origin logo and
- * the CORS model downloads. The same headers are set in vercel.json.
- */
-const isolationHeaders = {
-  "Cross-Origin-Opener-Policy": "same-origin",
-  "Cross-Origin-Embedder-Policy": "credentialless",
-};
-
 export default defineConfig({
   plugins: [react(), tailwindcss(), licenseFiles()],
-  server: { headers: isolationHeaders },
-  preview: { headers: isolationHeaders },
   // Relative asset URLs, so the build works from any subdomain or sub-path.
   base: "./",
   worker: {
@@ -55,7 +43,7 @@ export default defineConfig({
   },
   optimizeDeps: {
     // Pre-bundling breaks ONNX Runtime's own dynamic imports in dev.
-    exclude: ["@imgly/background-removal", "onnxruntime-web", "onnxruntime-web-webgpu"],
+    exclude: ["@imgly/background-removal", "onnxruntime-web"],
   },
   build: {
     target: "es2022",

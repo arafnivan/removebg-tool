@@ -1,10 +1,9 @@
 /**
- * Client for the background-removal worker (see remover.worker.js).
+ * Client for the background-removal worker (@imgly/background-removal).
  *
  * The image never leaves the device: the model weights and the ONNX runtime
- * are downloaded once (Hugging Face and jsDelivr for the WebGPU model,
- * IMG.LY's CDN for the CPU fallback) and cached, and inference runs in a
- * worker on this machine.
+ * are downloaded from IMG.LY's CDN (once — the browser caches them), and
+ * inference runs in a worker on this machine.
  */
 
 const INPUT_TYPES = ["image/jpeg", "image/png", "image/webp"];
