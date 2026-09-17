@@ -26,6 +26,11 @@ export const LOGO_URL = mainUrl("/_next/image?url=%2Fbrand%2Flogo.png&w=384&q=75
 export const LOGO_WIDTH = 991;
 export const LOGO_HEIGHT = 220;
 
-export const LICENSE_URL = "https://www.gnu.org/licenses/agpl-3.0.html";
+/** Shown in the footer's copyright notice. */
+export const COPYRIGHT = "© 2026 arafnivan";
+
+/** Licence files published with the site (see vite.config.js). */
+export const LICENSE_URL = "./LICENSE.txt";
+export const THIRD_PARTY_LICENSES_URL = "./third-party-licenses.txt";
 
 export const LIBRARY_URL = "https://github.com/imgly/background-removal-js";

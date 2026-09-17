@@ -1,5 +1,15 @@
 import { Lock } from "lucide-react";
-import { LIBRARY_URL, LICENSE_URL, MAIN_SITE_NAME, SOURCE_URL, mainUrl } from "../config";
+import {
+  COPYRIGHT,
+  LIBRARY_URL,
+  LICENSE_URL,
+  MAIN_SITE_NAME,
+  SOURCE_URL,
+  THIRD_PARTY_LICENSES_URL,
+  mainUrl,
+} from "../config";
+
+const linkClass = "underline underline-offset-2 hover:text-foreground";
 import { CATEGORIES, toolsIn } from "../data/tools";
 import { BrandLogo } from "./SiteHeader";
 
@@ -63,19 +73,26 @@ export function SiteFooter() {
           ))}
         </div>
 
-        <div className="mt-12 flex flex-col gap-3 border-t border-border pt-7 text-[12px] text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <p>No account. No uploads. Your images never leave your device.</p>
-          <p>
-            Background remover is free software under the{" "}
-            <a href={LICENSE_URL} target="_blank" rel="noopener" className="underline underline-offset-2 hover:text-foreground">
-              GNU AGPL-3.0
+        {/* AGPL-3.0 "Appropriate Legal Notices": copyright, no warranty, licence. */}
+        <div className="mt-12 flex flex-col gap-3 border-t border-border pt-7 text-[12px] leading-relaxed text-muted-foreground lg:flex-row lg:justify-between lg:gap-8">
+          <p className="max-w-2xl">
+            {COPYRIGHT}. This background remover is free software: you can redistribute and/or modify it under the
+            terms of the{" "}
+            <a href={LICENSE_URL} target="_blank" rel="noopener" className={linkClass}>
+              GNU Affero General Public License v3.0
             </a>
-            {" · "}
-            <a href={SOURCE_URL} target="_blank" rel="noopener" className="underline underline-offset-2 hover:text-foreground">
+            . It comes with ABSOLUTELY NO WARRANTY.
+          </p>
+          <p className="shrink-0">
+            <a href={SOURCE_URL} target="_blank" rel="noopener" className={linkClass}>
               Source code
             </a>
+            {" · "}
+            <a href={THIRD_PARTY_LICENSES_URL} target="_blank" rel="noopener" className={linkClass}>
+              Third-party licences
+            </a>
             {" · Powered by "}
-            <a href={LIBRARY_URL} target="_blank" rel="noopener" className="underline underline-offset-2 hover:text-foreground">
+            <a href={LIBRARY_URL} target="_blank" rel="noopener" className={linkClass}>
               @imgly/background-removal
             </a>
           </p>

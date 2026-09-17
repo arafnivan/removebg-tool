@@ -126,7 +126,9 @@ src/
     format.js                  File size, file names, downloads
     theme.js                   Theme storage
     cn.js                      Class name helper
-vercel.json                    Build settings and cache headers for Vercel
+scripts/
+  third-party-licenses.js      Collects dependency licences at build time
+vercel.json                    Build settings and headers for Vercel
 ```
 
 The page uses [Tailwind CSS v4](https://tailwindcss.com), the
@@ -158,12 +160,20 @@ licences are listed in [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).
 
 - **Keep the source link.** Section 13 of the AGPL requires that users who
   interact with the site over a network can get the source code of the version
-  they are using. The page links to it in the header and footer. Set
-  `VITE_SOURCE_URL` to your own public repository.
+  they are using. The page links to it in the footer. Set `VITE_SOURCE_URL` to
+  your own public repository.
+- **Deploy what you publish.** The live site must run code that is in the
+  linked repository. Deploying from the GitHub repository (as Vercel does)
+  keeps the two in step; if you deploy from your machine, push first.
 - **Publish your changes.** If you run a modified version publicly, your
   modified source must be available under the AGPL-3.0 as well.
-- **Keep the notices.** Keep `LICENSE`, `THIRD_PARTY_NOTICES.md` and the
-  copyright notices.
+- **Keep the legal notices.** Section 5(d) requires the page to show the
+  copyright, that there is no warranty, and where to find the licence. The
+  footer does this; change `COPYRIGHT` in `src/config.js` for your fork.
+- **Keep the licence files.** Keep `LICENSE`, `THIRD_PARTY_NOTICES.md` and the
+  copyright notices. The build publishes `LICENSE.txt`,
+  `THIRD_PARTY_NOTICES.txt` and `third-party-licenses.txt` (the full licence
+  text of every bundled package) next to the page.
 
 Linking to this tool from another website does not put that website under
 the AGPL; the two are separate programs.

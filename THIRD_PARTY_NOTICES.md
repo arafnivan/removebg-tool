@@ -5,7 +5,9 @@ ImageDoctor Background Remover is licensed under the
 
 It includes or loads the third-party software listed below. Each component
 stays under its own licence; all of them are compatible with the AGPL-3.0.
-Full licence texts are in each package's folder under `node_modules/`.
+The full licence text of every bundled package is generated at build time
+into `third-party-licenses.txt`, published with the site and linked from the
+footer (see `scripts/third-party-licenses.js`).
 
 ## Loaded at runtime
 
