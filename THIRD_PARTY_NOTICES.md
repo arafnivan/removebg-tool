@@ -37,12 +37,28 @@ Run `npm ls --omit=dev --all` to see the current tree.
 
 ## AI model
 
-The segmentation model is IS-Net
-([Highly Accurate Dichotomous Image Segmentation](https://github.com/xuebinqin/DIS)),
-listed by IMG.LY as MIT-licensed in `@imgly/background-removal`'s
-`ThirdPartyLicenses.json`. The ONNX model files and the ONNX Runtime binaries
-are downloaded at runtime from IMG.LY's CDN (`staticimgly.com`); they are not
-part of this repository.
+The segmentation model is IS-Net, from
+[DIS — Highly Accurate Dichotomous Image Segmentation](https://github.com/xuebinqin/DIS)
+by Xuebin Qin et al. This app uses the half-precision ONNX export
+(`isnet_fp16`) that IMG.LY publishes for `@imgly/background-removal`.
+
+Licence: **MIT, as declared by IMG.LY.** `@imgly/background-removal` 1.7.0
+ships a `ThirdPartyLicenses.json` whose entry for the model reads:
+
+```json
+"ISNET": {
+  "source": "https://github.com/xuebinqin/DIS",
+  "type": "model",
+  "license": "MIT"
+}
+```
+
+This notice relies on that declaration; the model's own licence terms are
+those published in the upstream repository linked above, which should be
+checked before redistributing the model. The ONNX model files and the ONNX
+Runtime binaries are downloaded at runtime from IMG.LY's CDN
+(`staticimgly.com`); they are not part of this repository or of the built
+site.
 
 ## Icons
 
@@ -77,9 +93,11 @@ bundled from `@fontsource-variable/geist`; its licence text is in
 
 ## Brand assets
 
-The ImageDoctor logo and favicon are not part of this repository. They are
-loaded from the main ImageDoctor site at runtime and are not covered by the
-AGPL-3.0.
+The ImageDoctor logo and icons in `public/brand/` are copies of the main
+ImageDoctor site's artwork, served from this site so they load under its
+cross-origin isolation and Content-Security-Policy. They are not covered by
+the AGPL-3.0; all rights are reserved by their owner. Forks should replace
+them with their own artwork.
 
 ## Development-only tools
 

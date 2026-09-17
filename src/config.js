@@ -19,10 +19,12 @@ export const MAIN_SITE_NAME = "ImageDoctor";
 export const mainUrl = (path = "/") => `${MAIN_SITE_URL}${path}`;
 
 /**
- * The ImageDoctor logo is loaded from the main site rather than copied here:
- * the brand artwork is not part of this AGPL-licensed repository.
+ * The ImageDoctor logo, served from this site (public/brand/) so it loads
+ * under the page's cross-origin isolation and Content-Security-Policy. The
+ * brand artwork is not covered by this repository's AGPL-3.0 licence (see
+ * THIRD_PARTY_NOTICES.md).
  */
-export const LOGO_URL = mainUrl("/_next/image?url=%2Fbrand%2Flogo.png&w=384&q=75");
+export const LOGO_URL = `${import.meta.env.BASE_URL}brand/logo.png`;
 export const LOGO_WIDTH = 991;
 export const LOGO_HEIGHT = 220;
 

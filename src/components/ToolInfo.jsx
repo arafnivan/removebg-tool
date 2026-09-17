@@ -1,28 +1,8 @@
 import { ArrowRight, ChevronDown } from "lucide-react";
 import { mainUrl } from "../config";
+import { FAQ, HOW_IT_WORKS } from "../data/content";
 import { RELATED_TOOLS } from "../data/tools";
 import { ToolTile } from "./ToolIcon";
-
-const BODY = [
-  "An AI segmentation model looks at every pixel and estimates how likely it is to belong to the main subject — a person, a product, a pet or an object. That estimate becomes a transparency mask, which is applied to your original image so the cut-out keeps its full resolution.",
-  "Everything runs inside your browser, so your photo stays on your device the whole time. The first image takes a little longer; after that, most images finish in a few seconds.",
-  "The result is always a PNG, because JPG can't store transparency. For a smaller file, convert it to WebP, which keeps the transparent background.",
-];
-
-const FAQ = [
-  {
-    q: "Is the background remover really free?",
-    a: "Yes. There are no credits, watermarks or resolution limits, and no account is needed.",
-  },
-  {
-    q: "Are my images uploaded anywhere?",
-    a: "No. The image is processed on your own device and never sent to a server.",
-  },
-  {
-    q: "Why is the PNG larger than my original JPG?",
-    a: "Transparent images are saved as lossless PNG. Run the result through the Image Converter to get a WebP with the same transparency at a fraction of the size.",
-  },
-];
 
 /** "How it works", FAQ and related tools — the section under every tool. */
 export function ToolInfo() {
@@ -32,7 +12,7 @@ export function ToolInfo() {
         <div className="max-w-2xl min-w-0">
           <h2 className="display-md">How the background remover works</h2>
           <div className="mt-3 space-y-3">
-            {BODY.map((paragraph) => (
+            {HOW_IT_WORKS.map((paragraph) => (
               <p key={paragraph} className="body-copy">
                 {paragraph}
               </p>

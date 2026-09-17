@@ -233,7 +233,10 @@ export function refineMask(alpha, width, height, options = {}) {
   const solid = new Uint8Array(small.data.length);
   for (let i = 0; i < solid.length; i++) solid[i] = small.data[i] >= o.solidAlpha ? 1 : 0;
   const { labels, areas } = labelIslands(solid, small.width, small.height);
-  const largest = Math.max(0, ...areas);
+  // A loop, not Math.max(...areas): a noisy mask can have more islands than
+  // a function call accepts arguments.
+  let largest = 0;
+  for (const area of areas) if (area > largest) largest = area;
 
   // Nothing confidently detected: leave the mask alone rather than erase it.
   if (largest < small.data.length * 0.002) {
@@ -245,7 +248,8 @@ export function refineMask(alpha, width, height, options = {}) {
   const seed = new Uint8Array(solid.length);
   for (let i = 0; i < seed.length; i++) seed[i] = keptIsland[labels[i]] && labels[i] ? 1 : 0;
 
-  const margin = o.keepMargin * Math.min(small.width, small.height);
+  // At least a few grid cells, or thin images lose their soft edges entirely.
+  const margin = Math.max(3, o.keepMargin * Math.min(small.width, small.height));
   const dist = distanceFrom(seed, small.width, small.height);
 
   // Inside the subject, near-opaque pixels become opaque and faint ones are

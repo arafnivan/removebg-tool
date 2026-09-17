@@ -15,9 +15,9 @@ run in the browser.
 
 - **Private:** processing happens on your device. There is no backend and no upload.
 - **Free:** no account, no watermark, no usage limit, no paid API.
-- **Formats:** JPG, PNG and WebP in; transparent PNG out at the original resolution.
+- **Formats:** JPG, PNG and WebP in; transparent PNG (default) or WebP out, or JPG/PNG/WebP on a white or custom background colour. Output keeps the original resolution up to about 36 MP (16 MP on iPhone/iPad and low-memory devices); larger images are scaled down.
 - **Upload:** drag and drop, file picker, or paste with Ctrl/⌘ + V.
-- **Progress:** a progress bar with a cancel button while the background is removed.
+- **Progress:** the one-time model download shows real progress; a cancel button is always available.
 - **Preview:** before/after slider, side by side, or result only, on a transparency checkerboard.
 - **Looks like ImageDoctor:** same header, tool layout, colours and footer as the main site, with light, dark and system themes.
 - **Responsive:** works on phones, with the download button kept at the bottom of the screen.
@@ -34,7 +34,8 @@ which runs an IS-Net segmentation model with ONNX Runtime Web.
 3. The mask is cleaned up (`src/lib/refine-mask.js`): faint background haze
    and small stray patches are removed, the subject is made solid, and
    background colour is taken out of soft edges such as hair and fur.
-4. The resulting cut-out is shown on a checkerboard and can be saved as PNG.
+4. The resulting cut-out is shown on a checkerboard and can be saved as PNG,
+   WebP or JPG.
 
 Only the model files are fetched from the network. The image itself never
 leaves the browser.
@@ -64,6 +65,7 @@ Copy `.env.example` to `.env.local` and set:
 | --- | --- | --- |
 | `VITE_SOURCE_URL` | `https://github.com/arafnivan/removebg-tool` | "Source code" link on the page. **Must point to the repository you deploy from** (see [License](#license)). |
 | `VITE_MAIN_SITE_URL` | `https://imgdoctor.vercel.app` | Link back to the main ImageDoctor site. |
+| `VITE_SITE_URL` | `https://removebg-imgdoctor.vercel.app` | Public URL of this deployment, for the canonical link, Open Graph image and structured data. |
 
 These values are built into the page, so rebuild after changing them.
 
@@ -79,10 +81,21 @@ These values are built into the page, so rebuild after changing them.
 3. Name the project `removebg-imgdoctor` to get
    `https://removebg-imgdoctor.vercel.app`, or add your own domain under
    **Settings → Domains**.
-4. Optional: set `VITE_SOURCE_URL` and `VITE_MAIN_SITE_URL` under
+4. Optional: set `VITE_SOURCE_URL`, `VITE_MAIN_SITE_URL` and `VITE_SITE_URL` under
    **Settings → Environment Variables**, then redeploy.
 
-`vercel.json` sets long-lived caching for the hashed files in `dist/assets/`.
+`vercel.json` sets long-lived caching for the hashed files in `dist/assets/`,
+and these headers on every response:
+
+- `Cross-Origin-Opener-Policy: same-origin` and
+  `Cross-Origin-Embedder-Policy: credentialless`, which make the page
+  cross-origin isolated so ONNX Runtime can run on several threads. (Safari
+  doesn't support `credentialless` yet and runs single-threaded.)
+- A Content-Security-Policy, plus `X-Content-Type-Options`,
+  `Referrer-Policy` and `Permissions-Policy`. The worker script
+  (`assets/remover.worker-*.js`) gets its own policy that also allows
+  `'unsafe-eval'`, which the `ndarray` package inside
+  `@imgly/background-removal` needs (it compiles code with `new Function`).
 
 ### Other hosts
 
@@ -97,19 +110,25 @@ Notes:
 - Files in `dist/assets/` have content hashes in their names, so they can be
   cached for a long time. Keep `index.html` uncached so new releases are
   picked up.
-- If you add a Content Security Policy, allow `https://staticimgly.com` in
-  `connect-src`, and allow `blob:` and `'wasm-unsafe-eval'` for scripts.
+- Copy the headers from `vercel.json`. Without the cross-origin isolation
+  headers the model still works, only slower. With a Content Security
+  Policy, allow `https://staticimgly.com` in `connect-src`, `blob:` and
+  `'wasm-unsafe-eval'` for scripts and workers, and `'unsafe-eval'` for the
+  worker script.
 
 ## Project structure
 
 ```
-index.html                     HTML shell, meta tags, theme before first paint
+index.html                     HTML shell and meta tags (structured data is added at build time)
+public/theme-init.js           Applies the saved theme before first paint
+public/brand/                  ImageDoctor logo and icons (not AGPL, see Trademarks)
 src/
   main.jsx                     React entry point
   App.jsx                      Page layout and state wiring
   config.js                    Source-code and main-site links
   styles.css                   Tailwind CSS v4 + ImageDoctor design tokens
   data/tools.js                Main-site tools for menus, footer, related tools
+  data/content.js              "How it works" and FAQ copy (also used for JSON-LD)
   components/
     SiteHeader.jsx             ImageDoctor header, tool menus, mobile menu
     ThemeToggle.jsx            Light / dark / system
@@ -123,6 +142,7 @@ src/
     ToolIcon.jsx               Tool icons on tinted tiles
   hooks/
     useBackgroundRemoval.js    Image, job and result state
+    useExport.js               PNG / WebP / JPG export with background colour
   lib/
     remover.js                 Worker client, progress, errors
     remover.worker.js          Runs @imgly/background-removal
@@ -190,9 +210,9 @@ read the licence or ask a lawyer. IMG.LY also offers
 ### Trademarks
 
 The AGPL covers the code, not the "ImageDoctor" name or logo. The logo and
-favicon are loaded from the main ImageDoctor site and are not part of this
-repository. If you publish a fork, please use your own name and logo
-(`LOGO_URL` in `src/config.js` and the icon links in `index.html`).
+icons in `public/brand/` are copies of the main site's artwork and are not
+covered by the AGPL. If you publish a fork, please replace them with your own
+name and artwork (`public/brand/`, `LOGO_*` in `src/config.js`).
 
 ## Contributing
 

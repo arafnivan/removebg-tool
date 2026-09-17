@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { Columns2, Maximize2, MoveHorizontal, Square } from "lucide-react";
 import { cn } from "../lib/cn";
 import { formatBytes } from "../lib/format";
@@ -47,6 +47,7 @@ export function Comparison({ before, after, busy }) {
   const viewportRef = useRef(null);
   const frameRef = useRef(null);
   const dragging = useRef(false);
+  const [keyboardFocus, setKeyboardFocus] = useState(false);
   const box = useContentBox(viewportRef);
   const activeMode = after ? mode : "original";
 
@@ -56,22 +57,15 @@ export function Comparison({ before, after, busy }) {
     setPosition(Math.min(100, Math.max(0, ((clientX - rect.left) / rect.width) * 100)));
   };
 
-  useEffect(() => {
-    const onMove = (event) => {
-      if (!dragging.current) return;
-      event.preventDefault();
-      moveTo(event.clientX);
-    };
-    const onUp = () => {
-      dragging.current = false;
-    };
-    window.addEventListener("pointermove", onMove, { passive: false });
-    window.addEventListener("pointerup", onUp);
-    return () => {
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-    };
-  }, []);
+  const startDrag = (event) => {
+    if (event.button !== 0) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dragging.current = true;
+    moveTo(event.clientX);
+  };
+  const endDrag = () => {
+    dragging.current = false;
+  };
 
   const renderViewport = () => {
     if (activeMode === "split") {
@@ -96,15 +90,24 @@ export function Comparison({ before, after, busy }) {
     }
 
     if (activeMode === "slider") {
+      // Only the handle blocks touch scrolling, so the page (and a zoomed-in
+      // image) can still be panned with a finger. A tap elsewhere on the
+      // image moves the handle; a mouse can drag from anywhere.
       return (
         <div
           ref={frameRef}
-          className="relative m-auto shrink-0 cursor-ew-resize touch-none select-none"
+          className="relative m-auto shrink-0 cursor-ew-resize select-none"
           style={displaySize(before.width, before.height, zoom, box)}
           onPointerDown={(event) => {
-            dragging.current = true;
-            moveTo(event.clientX);
+            if (event.pointerType === "mouse" || event.target.closest("[data-handle]")) startDrag(event);
           }}
+          onPointerMove={(event) => {
+            if (dragging.current) moveTo(event.clientX);
+          }}
+          onPointerUp={endDrag}
+          onPointerCancel={endDrag}
+          onLostPointerCapture={endDrag}
+          onClick={(event) => moveTo(event.clientX)}
         >
           <img
             src={before.url}
@@ -120,28 +123,37 @@ export function Comparison({ before, after, busy }) {
             style={{ clipPath: `inset(0 0 0 ${position}%)` }}
             draggable={false}
           />
-          <div
-            className="absolute inset-y-0 w-px bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.35)]"
-            style={{ left: `${position}%` }}
-            aria-hidden
-          >
-            <span className="absolute top-1/2 left-1/2 flex size-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-black/10 bg-white text-slate-700 shadow-md">
-              <MoveHorizontal className="size-4" />
-            </span>
-          </div>
           <input
             type="range"
             min={0}
             max={100}
             value={Math.round(position)}
             onChange={(event) => setPosition(Number(event.target.value))}
+            onFocus={(event) => setKeyboardFocus(event.target.matches(":focus-visible"))}
+            onBlur={() => setKeyboardFocus(false)}
             className="sr-only"
             aria-label="Comparison slider position"
           />
-          <span className="absolute top-2 left-2 rounded-md bg-black/60 px-2 py-0.5 text-[11px] font-medium text-white">
+          <div
+            data-handle
+            className="absolute inset-y-0 w-11 -translate-x-1/2 touch-none"
+            style={{ left: `${position}%` }}
+            aria-hidden
+          >
+            <div className="absolute inset-y-0 left-1/2 w-px bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.35)]" />
+            <span
+              className={cn(
+                "absolute top-1/2 left-1/2 flex size-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-black/10 bg-white text-slate-700 shadow-md",
+                keyboardFocus && "outline-2 outline-offset-2 outline-ring",
+              )}
+            >
+              <MoveHorizontal className="size-4" />
+            </span>
+          </div>
+          <span className="pointer-events-none absolute top-2 left-2 rounded-md bg-black/60 px-2 py-0.5 text-[11px] font-medium text-white">
             Original
           </span>
-          <span className="absolute top-2 right-2 rounded-md bg-black/60 px-2 py-0.5 text-[11px] font-medium text-white">
+          <span className="pointer-events-none absolute top-2 right-2 rounded-md bg-black/60 px-2 py-0.5 text-[11px] font-medium text-white">
             Result
           </span>
         </div>

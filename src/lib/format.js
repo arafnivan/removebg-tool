@@ -5,9 +5,9 @@ export function formatBytes(bytes) {
 }
 
 /** "photo.final.jpg" → "photo.final-no-bg.png" */
-export function outputName(name) {
+export function outputName(name, extension = "png") {
   const base = name.replace(/\.[^.]+$/, "") || "image";
-  return `${base}-no-bg.png`;
+  return `${base}-no-bg.${extension}`;
 }
 
 export function downloadBlob(blob, filename) {

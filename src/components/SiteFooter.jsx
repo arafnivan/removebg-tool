@@ -1,4 +1,4 @@
-import { Lock } from "lucide-react";
+import { Lock, WandSparkles } from "lucide-react";
 import {
   COPYRIGHT,
   LIBRARY_URL,
@@ -10,7 +10,7 @@ import {
 } from "../config";
 
 const linkClass = "underline underline-offset-2 hover:text-foreground";
-import { CATEGORIES, toolsIn } from "../data/tools";
+import { CATEGORIES, THIS_TOOL, toolsIn } from "../data/tools";
 import { BrandLogo } from "./SiteHeader";
 
 function GitHubMark({ className }) {
@@ -43,6 +43,14 @@ export function SiteFooter() {
               <Lock className="size-3.5" aria-hidden />
               Processed locally in your browser
             </p>
+            <a
+              href={THIS_TOOL.href}
+              aria-current="page"
+              className="flex w-fit items-center gap-1.5 text-[13.5px] font-medium text-primary hover:underline"
+            >
+              <WandSparkles className="size-3.5" aria-hidden />
+              {THIS_TOOL.title}
+            </a>
             <a
               href={SOURCE_URL}
               target="_blank"

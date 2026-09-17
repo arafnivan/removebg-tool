@@ -44,11 +44,19 @@ export const RELATED_TOOLS = ["convert", "crop", "profile-picture", "passport-ph
 
 export const toolsIn = (category) => TOOLS.filter((tool) => tool.category === category);
 
-/** This tool, described the way the main site describes its tools. */
+/**
+ * This tool, described the way the main site describes it (its
+ * BACKGROUND_REMOVER entry). The main site highlights it in the header, the
+ * mobile menu and the footer; here those links point at the current page.
+ */
 export const THIS_TOOL = {
   title: "AI Background Remover",
+  shortTitle: "Remove Background",
+  navTitle: "Remove BG",
+  badge: "AI",
   description:
     "Cut out people, products, pets and objects automatically and download a transparent PNG — the AI runs on your device.",
+  href: import.meta.env.BASE_URL,
   icon: "WandSparkles",
   hue: 290,
 };

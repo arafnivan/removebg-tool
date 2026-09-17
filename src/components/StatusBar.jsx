@@ -1,10 +1,13 @@
 import { Loader2, TriangleAlert, X } from "lucide-react";
 
+const megabytes = (bytes) => `${Math.max(1, Math.round(bytes / (1024 * 1024)))} MB`;
+
 /**
  * Progress while a job runs, or the error from the last one.
  *
- * The bar shows real progress while it's available, then an animated bar;
- * the label stays the same throughout.
+ * While the AI model downloads (first use only) the bar shows real progress
+ * over all its files; after that it is indeterminate, because the model gives
+ * no progress while it runs.
  */
 export function StatusBar({ status, onCancel, onRetry }) {
   if (status.kind === "error") {
@@ -27,19 +30,31 @@ export function StatusBar({ status, onCancel, onRetry }) {
 
   if (status.kind !== "running") return null;
 
-  const percent = status.stage?.phase === "download" ? status.stage.percent : null;
+  const download = status.stage?.phase === "download" ? status.stage : null;
+  const percent = download?.total ? Math.min(100, Math.floor((download.loaded / download.total) * 100)) : null;
+  const label = download
+    ? `Downloading AI model (one-time${download.total ? `, ${megabytes(download.total)}` : " download"})…`
+    : "Removing background…";
 
   return (
     <div className="flex items-center gap-4 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3">
       <Loader2 className="size-4 shrink-0 animate-spin text-primary" aria-hidden />
       <div className="min-w-0 flex-1 space-y-1.5">
-        <p className="text-[13px] font-medium">Removing background…</p>
+        <p className="flex items-baseline justify-between gap-3 text-[13px] font-medium">
+          <span className="min-w-0 truncate">{label}</span>
+          {/* Not announced: the progress bar carries the value for assistive tech. */}
+          {percent !== null && (
+            <span className="tabular shrink-0 text-[12px] text-muted-foreground" aria-hidden>
+              {percent}%
+            </span>
+          )}
+        </p>
         <div
           className="relative h-1.5 w-full overflow-hidden rounded-full bg-primary/15"
           role="progressbar"
-          aria-label="Background removal progress"
-          aria-valuemin={0}
-          aria-valuemax={100}
+          aria-label={download ? "AI model download" : "Background removal"}
+          aria-valuemin={percent === null ? undefined : 0}
+          aria-valuemax={percent === null ? undefined : 100}
           aria-valuenow={percent ?? undefined}
         >
           {percent === null ? (

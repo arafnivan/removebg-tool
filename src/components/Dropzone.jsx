@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { FolderOpen, ImagePlus, RefreshCw, X } from "lucide-react";
-import { ACCEPT } from "../lib/remover";
+import { ACCEPT, preloadModel } from "../lib/remover";
 import { cn } from "../lib/cn";
 import { formatBytes } from "../lib/format";
 import { PrivacyBadge } from "./ToolHeader";
@@ -71,7 +71,12 @@ export function Dropzone({ onFile }) {
 
   return (
     <div
+      // Someone reaching for the drop zone is about to use it: start the
+      // one-time model download now rather than after they pick a file.
+      onPointerEnter={preloadModel}
+      onFocus={preloadModel}
       onDragEnter={() => {
+        preloadModel();
         depth.current += 1;
         setDragging(true);
       }}
