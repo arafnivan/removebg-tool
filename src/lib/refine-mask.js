@@ -1,280 +1,222 @@
 /**
- * Cleans up the model's alpha mask before it is applied to the photo.
+ * Post-processing for the model's alpha mask.
  *
- * The segmentation model often leaves two kinds of artefact:
- *  - faint "haze": background pixels with low but non-zero alpha, which show
- *    up as a tinted veil around the subject;
- *  - stray islands: small patches of background (ground, furniture) that the
- *    model half-believes are foreground.
+ *  - cleanMask: a levels curve. Faint haze becomes fully transparent and
+ *    near-opaque pixels become fully opaque, while the soft ramp in between
+ *    (hair, fur, motion blur) is kept. Nothing is removed by position or
+ *    size: earlier versions dropped "stray islands", which also erased text,
+ *    second objects and hair strands.
  *
- * Both are removed here. Work that needs the whole image (finding islands,
- * measuring distance to the subject) runs on a copy no larger than
- * ANALYSIS_SIZE, which is the resolution the model predicted at anyway.
+ *  - estimateForeground: removes background colour that bleeds into soft
+ *    edges, using Blur-Fusion (Forte & Pitié, "Approximate Fast Foreground
+ *    Colour Estimation", ICIP 2021). Without it a subject shot against a
+ *    blue wall keeps a blue fringe in its hair.
  */
 
-const ANALYSIS_SIZE = 1024;
+/** Long side of the grid the coarse foreground pass runs on. */
+const COARSE_SIZE = 1024;
 
-export const REFINE_DEFAULTS = {
-  /** Alpha at or above this counts as "subject" when finding islands. */
-  solidAlpha: 128,
-  /** Islands smaller than this fraction of the largest one are dropped. */
-  minIslandRatio: 0.02,
-  /** Soft pixels further than this from the subject are cleared (fraction of the short side). */
-  keepMargin: 0.02,
-  /** Alpha below this becomes fully transparent. */
-  floor: 20,
-  /** Alpha above this becomes fully opaque. */
-  ceiling: 235,
-};
-
-/** Area-average downscale of a single-channel mask. */
-function downscale(alpha, width, height, scale) {
-  const w = Math.max(1, Math.round(width * scale));
-  const h = Math.max(1, Math.round(height * scale));
-  const out = new Uint8Array(w * h);
-  const counts = new Uint32Array(w * h);
-  const sums = new Uint32Array(w * h);
-  for (let y = 0; y < height; y++) {
-    const sy = Math.min(h - 1, Math.floor(y * scale));
-    const row = y * width;
-    const outRow = sy * w;
-    for (let x = 0; x < width; x++) {
-      const i = outRow + Math.min(w - 1, Math.floor(x * scale));
-      sums[i] += alpha[row + x];
-      counts[i] += 1;
-    }
+/**
+ * Map alpha through a linear ramp: at or below `floor` → 0, at or above
+ * `ceiling` → 255. Works in place on a one-byte-per-pixel mask.
+ */
+export function cleanMask(alpha, { floor = 10, ceiling = 240 } = {}) {
+  const lut = new Uint8Array(256);
+  for (let a = 0; a < 256; a++) {
+    lut[a] = a <= floor ? 0 : a >= ceiling ? 255 : Math.round(((a - floor) / (ceiling - floor)) * 255);
   }
-  for (let i = 0; i < out.length; i++) out[i] = counts[i] ? Math.round(sums[i] / counts[i]) : 0;
-  return { data: out, width: w, height: h };
+  for (let i = 0; i < alpha.length; i++) alpha[i] = lut[alpha[i]];
 }
 
 /**
- * Label 8-connected regions of `solid` pixels. Returns the label of every
- * pixel (0 = background) and the area of each label.
+ * Box-blur a float grid in place with separable running sums. Only a single
+ * line buffer is allocated, which matters for full-resolution grids.
+ * Edges are clamped, so the result is a proper average everywhere.
  */
-function labelIslands(solid, width, height) {
-  const labels = new Int32Array(width * height);
-  const areas = [0];
-  const stack = new Int32Array(width * height);
-  let next = 1;
-  for (let start = 0; start < solid.length; start++) {
-    if (!solid[start] || labels[start]) continue;
-    let top = 0;
-    let area = 0;
-    stack[top++] = start;
-    labels[start] = next;
-    while (top) {
-      const i = stack[--top];
-      area++;
-      const x = i % width;
-      const y = (i - x) / width;
-      for (let dy = -1; dy <= 1; dy++) {
-        const ny = y + dy;
-        if (ny < 0 || ny >= height) continue;
-        for (let dx = -1; dx <= 1; dx++) {
-          const nx = x + dx;
-          if ((dx === 0 && dy === 0) || nx < 0 || nx >= width) continue;
-          const j = ny * width + nx;
-          if (solid[j] && !labels[j]) {
-            labels[j] = next;
-            stack[top++] = j;
-          }
-        }
-      }
-    }
-    areas.push(area);
-    next++;
-  }
-  return { labels, areas };
-}
-
-/** Two-pass chamfer distance (in pixels) from every pixel to the nearest `seed`. */
-function distanceFrom(seed, width, height) {
-  const far = 1e9;
-  const dist = new Float32Array(width * height);
-  for (let i = 0; i < dist.length; i++) dist[i] = seed[i] ? 0 : far;
-  const diag = Math.SQRT2;
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const i = y * width + x;
-      let d = dist[i];
-      if (x > 0) d = Math.min(d, dist[i - 1] + 1);
-      if (y > 0) {
-        d = Math.min(d, dist[i - width] + 1);
-        if (x > 0) d = Math.min(d, dist[i - width - 1] + diag);
-        if (x < width - 1) d = Math.min(d, dist[i - width + 1] + diag);
-      }
-      dist[i] = d;
-    }
-  }
-  for (let y = height - 1; y >= 0; y--) {
-    for (let x = width - 1; x >= 0; x--) {
-      const i = y * width + x;
-      let d = dist[i];
-      if (x < width - 1) d = Math.min(d, dist[i + 1] + 1);
-      if (y < height - 1) {
-        d = Math.min(d, dist[i + width] + 1);
-        if (x < width - 1) d = Math.min(d, dist[i + width + 1] + diag);
-        if (x > 0) d = Math.min(d, dist[i + width - 1] + diag);
-      }
-      dist[i] = d;
-    }
-  }
-  return dist;
-}
-
-/** Box-blur a small float grid in place (separable running sums). */
-function boxBlur(grid, width, height, radius) {
-  const tmp = new Float32Array(grid.length);
+export function boxBlur(grid, width, height, radius) {
+  if (radius < 1) return;
+  const line = new Float32Array(Math.max(width, height));
+  const norm = 1 / (2 * radius + 1);
   for (let y = 0; y < height; y++) {
     const row = y * width;
-    let sum = 0;
-    for (let x = -radius; x <= radius; x++) sum += grid[row + Math.min(width - 1, Math.max(0, x))];
+    for (let x = 0; x < width; x++) line[x] = grid[row + x];
+    let sum = line[0] * (radius + 1);
+    for (let x = 1; x <= radius; x++) sum += line[Math.min(width - 1, x)];
     for (let x = 0; x < width; x++) {
-      tmp[row + x] = sum;
-      sum += grid[row + Math.min(width - 1, x + radius + 1)] - grid[row + Math.max(0, x - radius)];
+      grid[row + x] = sum * norm;
+      sum += line[Math.min(width - 1, x + radius + 1)] - line[Math.max(0, x - radius)];
     }
   }
   for (let x = 0; x < width; x++) {
-    let sum = 0;
-    for (let y = -radius; y <= radius; y++) sum += tmp[Math.min(height - 1, Math.max(0, y)) * width + x];
+    for (let y = 0; y < height; y++) line[y] = grid[y * width + x];
+    let sum = line[0] * (radius + 1);
+    for (let y = 1; y <= radius; y++) sum += line[Math.min(height - 1, y)];
     for (let y = 0; y < height; y++) {
-      grid[y * width + x] = sum;
-      sum += tmp[Math.min(height - 1, y + radius + 1) * width + x] - tmp[Math.max(0, y - radius) * width + x];
+      grid[y * width + x] = sum * norm;
+      sum += line[Math.min(height - 1, y + radius + 1)] - line[Math.max(0, y - radius)];
     }
   }
 }
 
+const EPS = 1e-5;
+
 /**
- * Remove background colour that bleeds into the subject's soft edges.
- *
- * An edge pixel's colour is a blend: C = a·F + (1 − a)·B. Nearby opaque
- * pixels give an estimate of the subject colour F and nearby transparent
- * pixels one of the background B, both measured on a small grid. Where alpha
- * is high enough the blend is solved for F; for fainter pixels the nearby
- * subject colour is used instead.
- *
- * `rgba` holds the original photo's pixels; `alpha` is the final mask.
+ * One Blur-Fusion step on a grid. `image`, `fg` and `bg` hold three float
+ * channels in [0, 1] (arrays of length 3, one grid each), `alpha` is a float
+ * grid in [0, 1]. Returns the new foreground and the blurred background.
  */
-export function decontaminateEdges(rgba, alpha, width, height) {
-  const scale = Math.min(1, ANALYSIS_SIZE / Math.max(width, height));
+function blurFusion(image, fg, bg, alpha, width, height, radius) {
+  const n = width * height;
+  const blurredAlpha = Float32Array.from(alpha);
+  boxBlur(blurredAlpha, width, height, radius);
+  const outFg = [];
+  const outBg = [];
+  for (let c = 0; c < 3; c++) {
+    const bF = new Float32Array(n);
+    const bB = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      bF[i] = fg[c][i] * alpha[i];
+      bB[i] = bg[c][i] * (1 - alpha[i]);
+    }
+    boxBlur(bF, width, height, radius);
+    boxBlur(bB, width, height, radius);
+    const f = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      const a = alpha[i];
+      const F = bF[i] / (blurredAlpha[i] + EPS);
+      const B = bB[i] / (1 - blurredAlpha[i] + EPS);
+      bB[i] = B;
+      f[i] = Math.min(1, Math.max(0, F + a * (image[c][i] - a * F - (1 - a) * B)));
+    }
+    outFg.push(f);
+    outBg.push(bB);
+  }
+  return { fg: outFg, bg: outBg };
+}
+
+/** Area-average downscale of the RGB channels and alpha to floats in [0, 1]. */
+function coarseGrids(rgba, alpha, width, height, w, h) {
+  const n = w * h;
+  const image = [new Float32Array(n), new Float32Array(n), new Float32Array(n)];
+  const a = new Float32Array(n);
+  const counts = new Float32Array(n);
+  const sx = w / width;
+  const sy = h / height;
+  for (let y = 0; y < height; y++) {
+    const row = Math.min(h - 1, Math.floor(y * sy)) * w;
+    for (let x = 0; x < width; x++) {
+      const cell = row + Math.min(w - 1, Math.floor(x * sx));
+      const i = y * width + x;
+      image[0][cell] += rgba[i * 4];
+      image[1][cell] += rgba[i * 4 + 1];
+      image[2][cell] += rgba[i * 4 + 2];
+      a[cell] += alpha[i];
+      counts[cell] += 1;
+    }
+  }
+  for (let i = 0; i < n; i++) {
+    const k = counts[i] ? 1 / (255 * counts[i]) : 0;
+    image[0][i] *= k;
+    image[1][i] *= k;
+    image[2][i] *= k;
+    a[i] *= k;
+  }
+  return { image, alpha: a };
+}
+
+/** Bilinear sample of a coarse grid at full-resolution pixel (x, y). */
+function makeSampler(width, height, w, h) {
+  const sx = w / width;
+  const sy = h / height;
+  const x0 = new Int32Array(width);
+  const x1 = new Int32Array(width);
+  const fx = new Float32Array(width);
+  for (let x = 0; x < width; x++) {
+    const gx = Math.min(w - 1, Math.max(0, (x + 0.5) * sx - 0.5));
+    x0[x] = Math.floor(gx);
+    x1[x] = Math.min(w - 1, x0[x] + 1);
+    fx[x] = gx - x0[x];
+  }
+  return {
+    row(y) {
+      const gy = Math.min(h - 1, Math.max(0, (y + 0.5) * sy - 0.5));
+      const y0 = Math.floor(gy);
+      return { r0: y0 * w, r1: Math.min(h - 1, y0 + 1) * w, fy: gy - y0 };
+    },
+    at(grid, { r0, r1, fy }, x) {
+      const a = grid[r0 + x0[x]] + (grid[r0 + x1[x]] - grid[r0 + x0[x]]) * fx[x];
+      const b = grid[r1 + x0[x]] + (grid[r1 + x1[x]] - grid[r1 + x0[x]]) * fx[x];
+      return a + (b - a) * fy;
+    },
+  };
+}
+
+/**
+ * Replace the colour of every partly transparent pixel with its estimated
+ * foreground colour. `rgba` holds the original photo (modified in place),
+ * `alpha` the final mask (one byte per pixel). Returns the number of pixels
+ * that were changed.
+ *
+ * The first, wide pass runs on a grid no larger than COARSE_SIZE; the second,
+ * narrow pass runs at full resolution and allocates three float grids.
+ */
+export function estimateForeground(rgba, alpha, width, height) {
+  let soft = 0;
+  for (let i = 0; i < alpha.length; i++) if (alpha[i] > 0 && alpha[i] < 255) soft++;
+  if (!soft) return 0;
+
+  // Pass 1: coarse, wide radius. Gives a smooth foreground and background.
+  const scale = Math.min(1, COARSE_SIZE / Math.max(width, height));
   const w = Math.max(1, Math.round(width * scale));
   const h = Math.max(1, Math.round(height * scale));
-  const fg = [new Float32Array(w * h), new Float32Array(w * h), new Float32Array(w * h)];
-  const bg = [new Float32Array(w * h), new Float32Array(w * h), new Float32Array(w * h)];
-  const fgCount = new Float32Array(w * h);
-  const bgCount = new Float32Array(w * h);
-  const colOf = new Int32Array(width);
-  for (let x = 0; x < width; x++) colOf[x] = Math.min(w - 1, Math.floor(x * scale));
+  const coarse = coarseGrids(rgba, alpha, width, height, w, h);
+  const wide = Math.max(4, Math.round(Math.max(w, h) * 0.06));
+  const pass1 = blurFusion(coarse.image, coarse.image, coarse.image, coarse.alpha, w, h, wide);
 
-  let edges = 0;
-  for (let y = 0; y < height; y++) {
-    const cellRow = Math.min(h - 1, Math.floor(y * scale)) * w;
-    for (let x = 0; x < width; x++) {
-      const i = y * width + x;
-      const a = alpha[i];
-      const cell = cellRow + colOf[x];
-      if (a >= 250) {
-        fg[0][cell] += rgba[i * 4];
-        fg[1][cell] += rgba[i * 4 + 1];
-        fg[2][cell] += rgba[i * 4 + 2];
-        fgCount[cell] += 1;
-      } else if (a === 0) {
-        bg[0][cell] += rgba[i * 4];
-        bg[1][cell] += rgba[i * 4 + 1];
-        bg[2][cell] += rgba[i * 4 + 2];
-        bgCount[cell] += 1;
-      } else {
-        edges++;
+  // Pass 2: full resolution, narrow radius. F starts as the photo where the
+  // subject is opaque and as the coarse estimate elsewhere.
+  const n = width * height;
+  const radius = Math.max(3, Math.round(Math.max(width, height) * 0.004));
+  const sampler = makeSampler(width, height, w, h);
+  const blurredAlpha = new Float32Array(n);
+  for (let i = 0; i < n; i++) blurredAlpha[i] = alpha[i] / 255;
+  boxBlur(blurredAlpha, width, height, radius);
+
+  const bF = new Float32Array(n);
+  const bB = new Float32Array(n);
+  const out = new Uint8ClampedArray(soft * 3);
+  for (let c = 0; c < 3; c++) {
+    for (let y = 0; y < height; y++) {
+      const s = sampler.row(y);
+      for (let x = 0; x < width; x++) {
+        const i = y * width + x;
+        const a = alpha[i] / 255;
+        const F = alpha[i] === 255 ? rgba[i * 4 + c] / 255 : sampler.at(pass1.fg[c], s, x);
+        bF[i] = F * a;
+        bB[i] = sampler.at(pass1.bg[c], s, x) * (1 - a);
       }
     }
-  }
-  if (!edges) return 0;
-
-  const radius = Math.max(2, Math.round(Math.min(w, h) * 0.008));
-  for (const grid of [...fg, fgCount, ...bg, bgCount]) boxBlur(grid, w, h, radius);
-
-  for (let y = 0; y < height; y++) {
-    const cellRow = Math.min(h - 1, Math.floor(y * scale)) * w;
-    for (let x = 0; x < width; x++) {
-      const i = y * width + x;
+    boxBlur(bF, width, height, radius);
+    boxBlur(bB, width, height, radius);
+    let k = 0;
+    for (let i = 0; i < n; i++) {
       const a8 = alpha[i];
-      if (a8 === 0 || a8 >= 250) continue;
-      const cell = cellRow + colOf[x];
-      if (!fgCount[cell]) continue;
+      if (a8 === 0 || a8 === 255) continue;
       const a = a8 / 255;
-      const hasBg = bgCount[cell] > 0;
-      // Trust the solved colour more as alpha rises; faint pixels take the neighbours' colour.
-      const solveWeight = hasBg ? Math.min(1, Math.max(0, (a - 0.25) / 0.5)) : 0;
-      for (let c = 0; c < 3; c++) {
-        const nearFg = fg[c][cell] / fgCount[cell];
-        let value = nearFg;
-        if (solveWeight > 0) {
-          const nearBg = bg[c][cell] / bgCount[cell];
-          const solved = (rgba[i * 4 + c] - (1 - a) * nearBg) / a;
-          value = solveWeight * solved + (1 - solveWeight) * nearFg;
-        }
-        rgba[i * 4 + c] = Math.max(0, Math.min(255, Math.round(value)));
-      }
+      const F = bF[i] / (blurredAlpha[i] + EPS);
+      const B = bB[i] / (1 - blurredAlpha[i] + EPS);
+      const value = F + a * (rgba[i * 4 + c] / 255 - a * F - (1 - a) * B);
+      out[k++ * 3 + c] = Math.round(value * 255);
     }
   }
-  return edges;
-}
-
-/**
- * Refine `alpha` (width × height, one byte per pixel) in place.
- * Returns a short summary, useful for tests.
- */
-export function refineMask(alpha, width, height, options = {}) {
-  const o = { ...REFINE_DEFAULTS, ...options };
-  const scale = Math.min(1, ANALYSIS_SIZE / Math.max(width, height));
-  const small = scale < 1 ? downscale(alpha, width, height, scale) : { data: alpha, width, height };
-
-  const solid = new Uint8Array(small.data.length);
-  for (let i = 0; i < solid.length; i++) solid[i] = small.data[i] >= o.solidAlpha ? 1 : 0;
-  const { labels, areas } = labelIslands(solid, small.width, small.height);
-  const largest = Math.max(0, ...areas);
-
-  // Nothing confidently detected: leave the mask alone rather than erase it.
-  if (largest < small.data.length * 0.002) {
-    return { refined: false, islands: areas.length - 1, removedIslands: 0 };
+  let k = 0;
+  for (let i = 0; i < n; i++) {
+    const a8 = alpha[i];
+    if (a8 === 0 || a8 === 255) continue;
+    rgba[i * 4] = out[k * 3];
+    rgba[i * 4 + 1] = out[k * 3 + 1];
+    rgba[i * 4 + 2] = out[k * 3 + 2];
+    k++;
   }
-
-  const minArea = largest * o.minIslandRatio;
-  const keptIsland = areas.map((area) => area >= minArea);
-  const seed = new Uint8Array(solid.length);
-  for (let i = 0; i < seed.length; i++) seed[i] = keptIsland[labels[i]] && labels[i] ? 1 : 0;
-
-  const margin = o.keepMargin * Math.min(small.width, small.height);
-  const dist = distanceFrom(seed, small.width, small.height);
-
-  // Inside the subject, near-opaque pixels become opaque and faint ones are
-  // dropped. Outside it, alpha is only ever reduced: faint pixels are cleared
-  // and the rest fade out with distance, so nothing next to the subject (a
-  // wall, a door) becomes more visible than the model made it.
-  const range = o.ceiling - o.floor;
-  const colOf = new Int32Array(width);
-  for (let x = 0; x < width; x++) colOf[x] = Math.min(small.width - 1, Math.floor(x * scale));
-  for (let y = 0; y < height; y++) {
-    const cellRow = Math.min(small.height - 1, Math.floor(y * scale)) * small.width;
-    const row = y * width;
-    for (let x = 0; x < width; x++) {
-      const i = row + x;
-      const a = alpha[i];
-      const d = dist[cellRow + colOf[x]];
-      if (a <= o.floor || d >= margin) {
-        alpha[i] = 0;
-      } else if (d === 0) {
-        alpha[i] = a >= o.ceiling ? 255 : Math.round(((a - o.floor) / range) * 255);
-      } else {
-        alpha[i] = Math.round(a * (1 - d / margin));
-      }
-    }
-  }
-
-  return {
-    refined: true,
-    islands: areas.length - 1,
-    removedIslands: keptIsland.filter((kept, label) => label && !kept).length,
-  };
+  return soft;
 }

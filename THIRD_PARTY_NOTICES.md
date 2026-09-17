@@ -14,8 +14,8 @@ footer (see `scripts/third-party-licenses.js`).
 | Component | Version | Licence | Source |
 | --- | --- | --- | --- |
 | @imgly/background-removal | 1.7.0 | AGPL-3.0 | https://github.com/imgly/background-removal-js |
-| onnxruntime-web | 1.21.0 | MIT | https://github.com/microsoft/onnxruntime |
-| onnxruntime-common | 1.21.0 | MIT | https://github.com/microsoft/onnxruntime |
+| onnxruntime-web | 1.21.0 (used by @imgly/background-removal) and 1.30.0 (installed as `onnxruntime-web-webgpu`) | MIT | https://github.com/microsoft/onnxruntime |
+| onnxruntime-common | 1.21.0, 1.30.0 | MIT | https://github.com/microsoft/onnxruntime |
 | react | 19.3.0 | MIT | https://github.com/facebook/react |
 | react-dom | 19.3.0 | MIT | https://github.com/facebook/react |
 | scheduler | 0.28.0 | MIT | https://github.com/facebook/react |
@@ -35,14 +35,20 @@ footer (see `scripts/third-party-licenses.js`).
 Versions are the ones pinned in `package-lock.json` at the time of writing.
 Run `npm ls --omit=dev --all` to see the current tree.
 
-## AI model
+## AI models
 
-The segmentation model is IS-Net
-([Highly Accurate Dichotomous Image Segmentation](https://github.com/xuebinqin/DIS)),
-listed by IMG.LY as MIT-licensed in `@imgly/background-removal`'s
-`ThirdPartyLicenses.json`. The ONNX model files and the ONNX Runtime binaries
-are downloaded at runtime from IMG.LY's CDN (`staticimgly.com`); they are not
-part of this repository.
+Neither model is part of this repository; both are downloaded at runtime.
+
+- **BiRefNet-lite** ([Bilateral Reference for High-Resolution Dichotomous
+  Image Segmentation](https://github.com/ZhengPeng7/BiRefNet), © Peng Zheng et
+  al.), MIT licence. The fp16 ONNX export is
+  [`onnx-community/BiRefNet_lite-ONNX`](https://huggingface.co/onnx-community/BiRefNet_lite-ONNX),
+  downloaded from Hugging Face. Used when WebGPU is available.
+- **IS-Net** ([Highly Accurate Dichotomous Image Segmentation](https://github.com/xuebinqin/DIS)),
+  listed by IMG.LY as MIT-licensed in `@imgly/background-removal`'s
+  `ThirdPartyLicenses.json`. The ONNX model files and the matching ONNX
+  Runtime binaries are downloaded from IMG.LY's CDN (`staticimgly.com`). Used
+  as the CPU fallback.
 
 ## Icons
 

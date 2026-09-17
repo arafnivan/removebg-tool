@@ -5,7 +5,7 @@ import { ToolTile } from "./ToolIcon";
 
 const BODY = [
   "An AI segmentation model looks at every pixel and estimates how likely it is to belong to the main subject — a person, a product, a pet or an object. That estimate becomes a transparency mask, which is applied to your original image so the cut-out keeps its full resolution.",
-  "Everything runs inside your browser, so your photo stays on your device the whole time. The first image takes a little longer; after that, most images finish in a few seconds.",
+  "Everything runs inside your browser, so your photo stays on your device the whole time. The first image takes longer because the AI model is downloaded once; after that, most images finish in several seconds.",
   "The result is always a PNG, because JPG can't store transparency. For a smaller file, convert it to WebP, which keeps the transparent background.",
 ];
 
