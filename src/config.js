@@ -8,9 +8,23 @@
  */
 export const SOURCE_URL = import.meta.env.VITE_SOURCE_URL || "https://github.com/arafnivan/removebg-tool";
 
-export const MAIN_SITE_URL = import.meta.env.VITE_MAIN_SITE_URL || "https://imgdoctor.vercel.app";
+export const MAIN_SITE_URL = (import.meta.env.VITE_MAIN_SITE_URL || "https://imgdoctor.vercel.app").replace(
+  /\/$/,
+  "",
+);
 
 export const MAIN_SITE_NAME = "ImageDoctor";
+
+/** A page on the main site, e.g. mainUrl("/tools"). */
+export const mainUrl = (path = "/") => `${MAIN_SITE_URL}${path}`;
+
+/**
+ * The ImageDoctor logo is loaded from the main site rather than copied here:
+ * the brand artwork is not part of this AGPL-licensed repository.
+ */
+export const LOGO_URL = mainUrl("/_next/image?url=%2Fbrand%2Flogo.png&w=384&q=75");
+export const LOGO_WIDTH = 991;
+export const LOGO_HEIGHT = 220;
 
 export const LICENSE_URL = "https://www.gnu.org/licenses/agpl-3.0.html";
 

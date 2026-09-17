@@ -20,7 +20,8 @@ run in the browser.
 - **Progress:** shows model download progress, then processing, with a cancel button.
 - **Preview:** before/after slider, side by side, or result only, on a transparency checkerboard.
 - **Models:** "Precise" (about 80 MB) or "Fast" (about 40 MB). Either downloads once and is then cached.
-- **Responsive:** works in light and dark mode and on phones.
+- **Looks like ImageDoctor:** same header, tool layout, colours and footer as the main site, with light, dark and system themes.
+- **Responsive:** works on phones, with the download button kept at the bottom of the screen.
 - **Stays responsive:** the model runs in a Web Worker, so the page doesn't freeze.
 
 ## How it works
@@ -103,28 +104,39 @@ Notes:
 ## Project structure
 
 ```
-index.html                     HTML shell and meta tags
+index.html                     HTML shell, meta tags, theme before first paint
 src/
   main.jsx                     React entry point
   App.jsx                      Page layout and state wiring
   config.js                    Source-code and main-site links
-  styles.css                   All styles (light and dark)
+  styles.css                   Tailwind CSS v4 + ImageDoctor design tokens
+  data/tools.js                Main-site tools for menus, footer, related tools
   components/
-    SiteHeader.jsx             Brand and "Source code" link
-    SiteFooter.jsx             Licence, source and credits
-    Dropzone.jsx               Drag & drop, file picker, paste
-    Comparison.jsx             Before/after slider, side by side, result
+    SiteHeader.jsx             ImageDoctor header, tool menus, mobile menu
+    ThemeToggle.jsx            Light / dark / system
+    ToolHeader.jsx             Breadcrumb, icon, title, privacy badge
+    Dropzone.jsx               Drag & drop, file picker, paste, current image
+    Comparison.jsx             Slider, side by side, original, result, zoom
     StatusBar.jsx              Progress, cancel, errors
-    Icons.jsx                  Inline SVG icons
+    Panel.jsx                  Settings cards and segmented controls
+    ToolInfo.jsx               How it works, FAQ, related tools
+    SiteFooter.jsx             ImageDoctor footer, licence and source link
+    ToolIcon.jsx               Tool icons on tinted tiles
   hooks/
     useBackgroundRemoval.js    Image, job and result state
   lib/
     remover.js                 Worker client, progress, errors
     remover.worker.js          Runs @imgly/background-removal
     format.js                  File size, file names, downloads
-public/favicon.svg
-vercel.json                    Cache headers for Vercel
+    theme.js                   Theme storage
+    cn.js                      Class name helper
+vercel.json                    Build settings and cache headers for Vercel
 ```
+
+The page uses [Tailwind CSS v4](https://tailwindcss.com), the
+[Geist](https://vercel.com/font) font (self-hosted via Fontsource) and
+[Lucide](https://lucide.dev) icons. Links in the header, menus and footer point
+to the main ImageDoctor site (`VITE_MAIN_SITE_URL`).
 
 ## License
 
@@ -167,8 +179,10 @@ read the licence or ask a lawyer. IMG.LY also offers
 
 ### Trademarks
 
-The AGPL covers the code, not the "ImageDoctor" name. If you publish a fork,
-please use your own name.
+The AGPL covers the code, not the "ImageDoctor" name or logo. The logo and
+favicon are loaded from the main ImageDoctor site and are not part of this
+repository. If you publish a fork, please use your own name and logo
+(`LOGO_URL` in `src/config.js` and the icon links in `index.html`).
 
 ## Contributing
 

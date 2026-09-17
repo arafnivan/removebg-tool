@@ -17,6 +17,8 @@ Full licence texts are in each package's folder under `node_modules/`.
 | react | 19.3.0 | MIT | https://github.com/facebook/react |
 | react-dom | 19.3.0 | MIT | https://github.com/facebook/react |
 | scheduler | 0.28.0 | MIT | https://github.com/facebook/react |
+| lucide-react | 1.46.0 | ISC | https://github.com/lucide-icons/lucide |
+| @fontsource-variable/geist (Geist font) | 5.3.0 | OFL-1.1 | https://github.com/fontsource/font-files, https://github.com/vercel/geist-font |
 | lodash-es | 4.18.1 | MIT | https://github.com/lodash/lodash |
 | ndarray | 1.0.19 | MIT | https://github.com/mikolalysenko/ndarray |
 | iota-array | 1.0.0 | MIT | https://github.com/mikolalysenko/iota-array |
@@ -42,7 +44,7 @@ part of this repository.
 
 ## Icons
 
-Some inline SVG icons are adapted from [Lucide](https://lucide.dev), which is
+Icons come from [Lucide](https://lucide.dev) (`lucide-react`), which is
 licensed under the ISC License:
 
 > Copyright (c) for portions of Lucide are held by Cole Bemis 2013-2022 as part
@@ -64,7 +66,21 @@ licensed under the ISC License:
 The GitHub mark is a trademark of GitHub, Inc., used here only to link to the
 source repository.
 
+## Font
+
+The Geist font is © Vercel, licensed under the
+[SIL Open Font License 1.1](https://openfontlicense.org). The font files are
+bundled from `@fontsource-variable/geist`; its licence text is in
+`node_modules/@fontsource-variable/geist/LICENSE`.
+
+## Brand assets
+
+The ImageDoctor logo and favicon are not part of this repository. They are
+loaded from the main ImageDoctor site at runtime and are not covered by the
+AGPL-3.0.
+
 ## Development-only tools
 
-Vite and @vitejs/plugin-react (both MIT) are used to build the site. They are
-not included in the built output.
+Vite, @vitejs/plugin-react, Tailwind CSS and @tailwindcss/vite (all MIT) are
+used to build the site. Only the CSS that Tailwind generates is included in
+the built output.

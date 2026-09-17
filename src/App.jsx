@@ -1,16 +1,27 @@
 import { useCallback, useState } from "react";
+import { Download, Scissors, ShieldCheck, Sparkles, TriangleAlert, X } from "lucide-react";
 import { DEFAULT_MODEL, MODELS, isSupported } from "./lib/remover";
 import { downloadBlob, formatBytes, outputName } from "./lib/format";
 import { useBackgroundRemoval } from "./hooks/useBackgroundRemoval";
 import { SiteHeader } from "./components/SiteHeader";
+import { ToolHeader } from "./components/ToolHeader";
+import { ToolInfo } from "./components/ToolInfo";
 import { SiteFooter } from "./components/SiteFooter";
-import { Dropzone } from "./components/Dropzone";
+import { CurrentImage, Dropzone, usePageFileInput } from "./components/Dropzone";
 import { Comparison } from "./components/Comparison";
 import { StatusBar } from "./components/StatusBar";
-import { DownloadIcon } from "./components/Icons";
+import { Panel, Segmented } from "./components/Panel";
+
+const FEATURES = [
+  { icon: Sparkles, title: "Automatic", body: "People, products, pets and objects are detected and cut out for you." },
+  { icon: Scissors, title: "Full resolution", body: "The cut-out keeps every pixel of your original image." },
+  { icon: ShieldCheck, title: "Private", body: "Your photo never leaves your device. No sign-up, no watermark." },
+];
+
+const MODEL_OPTIONS = Object.entries(MODELS).map(([value, option]) => ({ value, label: option.label }));
 
 export default function App() {
-  const { source, result, status, start, rerun, cancel } = useBackgroundRemoval();
+  const { source, result, status, start, rerun, cancel, reset } = useBackgroundRemoval();
   const [model, setModel] = useState(DEFAULT_MODEL);
   const [notice, setNotice] = useState(null);
 
@@ -29,102 +40,103 @@ export default function App() {
     },
     [start, model],
   );
+  usePageFileInput(handleFile);
 
   const downloadButton = (
     <button
       type="button"
-      className="button button-primary button-full"
+      className="btn btn-default btn-md w-full"
       disabled={!result || running}
       onClick={() => result && downloadBlob(result.blob, outputName(source.name))}
     >
-      <DownloadIcon />
+      <Download />
       Download PNG
-      {result && <span className="download-size">{formatBytes(result.blob.size)}</span>}
+      {result && <span className="tabular hidden sm:inline">{formatBytes(result.blob.size)}</span>}
     </button>
+  );
+
+  const noticeBox = notice && (
+    <div role="alert" className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3">
+      <TriangleAlert className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden />
+      <p className="min-w-0 flex-1 text-[13px] leading-relaxed text-muted-foreground">{notice}</p>
+      <button
+        type="button"
+        className="btn btn-ghost btn-icon -my-1 size-7 text-muted-foreground"
+        onClick={() => setNotice(null)}
+        aria-label="Dismiss"
+      >
+        <X className="size-3.5" />
+      </button>
+    </div>
   );
 
   return (
     <>
       <SiteHeader />
+      <ToolHeader />
 
-      <main className="container main">
-        <section className="intro">
-          <h1>Free AI Background Remover</h1>
-          <p>
-            Cut out people, products, pets and objects and download a transparent PNG. The AI runs in your
-            browser — your photo is never uploaded.
-          </p>
-        </section>
-
-        {notice && (
-          <p className="notice" role="alert">
-            {notice}
-          </p>
-        )}
-
+      <main className="flex-1">
         {!source ? (
-          <section className="upload" aria-label="Upload an image">
+          <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-10 sm:px-6 lg:px-8">
+            {noticeBox}
             <Dropzone onFile={handleFile} />
-            <div className="note">
-              <strong>Private by design.</strong> The first time you use this tool your browser downloads the AI
-              model (about 40–80 MB) and keeps it cached. After that, every image is processed right here on your
-              device. No account, no watermark, no usage limit.
-            </div>
-          </section>
-        ) : (
-          <section className="workspace" aria-label="Background removal">
-            <div className="preview-column">
-              <div aria-live="polite">
-                <StatusBar status={status} onCancel={cancel} onRetry={() => rerun(model)} />
-              </div>
-              <Comparison before={source} after={result} busy={running} />
-              <p className="file-info">
-                {source.name} · {source.width} × {source.height} · {formatBytes(source.file.size)}
-                {result && ` → PNG · ${formatBytes(result.blob.size)}`}
-              </p>
-            </div>
-
-            <aside className="panel-column">
-              <div className="panel">
-                <h2>Model</h2>
-                <div className="segmented segmented-full" role="radiogroup" aria-label="Model">
-                  {Object.entries(MODELS).map(([value, option]) => (
-                    <button
-                      key={value}
-                      type="button"
-                      role="radio"
-                      aria-checked={model === value}
-                      onClick={() => setModel(value)}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
+            <div className="grid gap-3 sm:grid-cols-3">
+              {FEATURES.map(({ icon: Icon, title, body }) => (
+                <div key={title} className="rounded-xl border border-border bg-card p-4">
+                  <p className="flex items-center gap-2 text-[13px] font-semibold">
+                    <Icon className="size-4 text-primary" aria-hidden />
+                    {title}
+                  </p>
+                  <p className="mt-1.5 text-[12px] leading-relaxed text-muted-foreground">{body}</p>
                 </div>
-                <p className="hint">{MODELS[model].hint}</p>
-                {stale && (
-                  <button type="button" className="button button-primary button-full" onClick={() => rerun(model)}>
-                    Apply {MODELS[model].label.toLowerCase()} model
-                  </button>
-                )}
+              ))}
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="mx-auto grid w-full max-w-400 grid-cols-1 gap-5 px-4 py-5 pb-24 sm:px-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:px-8 lg:pb-5">
+              <div className="min-w-0 space-y-3" aria-live="polite">
+                {noticeBox}
+                <StatusBar status={status} onCancel={cancel} onRetry={() => rerun(model)} />
+                <Comparison before={source} after={result} busy={running} />
               </div>
 
-              <div className="panel">
-                <h2>Export</h2>
-                <p className="hint">
-                  Saved as a PNG with a transparent background, at the original resolution. Camera and location
-                  metadata are not carried over.
-                </p>
-                {downloadButton}
-                <Dropzone onFile={handleFile} compact />
-              </div>
-            </aside>
+              <aside aria-label="Settings" className="min-w-0 space-y-4 lg:sticky lg:top-22 lg:self-start">
+                <CurrentImage image={source} onFile={handleFile} onClear={reset} />
+
+                <Panel title="Remove background" description="AI cut-out, processed on your device">
+                  <div className="space-y-1.5">
+                    <p className="text-[13px] font-medium text-muted-foreground">Model</p>
+                    <Segmented label="Model" value={model} options={MODEL_OPTIONS} onChange={setModel} />
+                    <p className="text-[11px] leading-relaxed text-muted-foreground">{MODELS[model].hint}</p>
+                  </div>
+                  {stale && (
+                    <button type="button" className="btn btn-default btn-md w-full" onClick={() => rerun(model)}>
+                      <Sparkles />
+                      Apply {MODELS[model].label.toLowerCase()} model
+                    </button>
+                  )}
+                </Panel>
+
+                <Panel title="Export">
+                  <p className="text-[12px] leading-relaxed text-muted-foreground">
+                    Saved as a PNG with a transparent background, at the original resolution. Camera and location
+                    details are not carried over.
+                  </p>
+                  {downloadButton}
+                </Panel>
+              </aside>
+            </div>
 
             {/* Keeps the main action within thumb reach on phones. */}
-            <div className="mobile-bar">{downloadButton}</div>
-          </section>
+            <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md lg:hidden">
+              {downloadButton}
+            </div>
+          </>
         )}
       </main>
 
+      <ToolInfo />
       <SiteFooter />
     </>
   );

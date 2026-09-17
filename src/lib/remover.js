@@ -9,11 +9,11 @@
 export const MODELS = {
   isnet_fp16: {
     label: "Precise",
-    hint: "Cleaner edges around hair and fine detail. ~80 MB one-time download.",
+    hint: "Cleaner edges around hair, fur and fine detail.",
   },
   isnet_quint8: {
     label: "Fast",
-    hint: "Smaller model, quicker first run. ~40 MB one-time download.",
+    hint: "Quicker, and good for simple backgrounds.",
   },
 };
 
@@ -66,7 +66,7 @@ function friendlyError(message) {
   const lower = message.toLowerCase();
   if (lower.includes("fetch") || lower.includes("network")) {
     return new Error(
-      "The AI model couldn't be downloaded. Check your internet connection and try again — it's only needed the first time.",
+      "Couldn't reach the network. Check your internet connection and try again.",
     );
   }
   if (lower.includes("memory") || lower.includes("allocation") || lower.includes("bad_alloc")) {
