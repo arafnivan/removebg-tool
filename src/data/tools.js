@@ -26,6 +26,7 @@ export const TOOLS = [
   { slug: "passport-photo", title: "Passport Photo Maker", category: "specialized", icon: "IdCard", hue: 265, description: "Passport and visa photos at the exact size, ready to print." },
   { slug: "id-photo", title: "ID Photo Maker", category: "specialized", icon: "ScanFace", hue: 240, description: "ID card and badge photos with custom size and background." },
   { slug: "profile-picture", title: "Profile Picture Maker", category: "specialized", icon: "CircleUser", hue: 345, description: "Frame an avatar as a circle or square with borders." },
+  { slug: "brand-poster", title: "Brand Poster Maker", category: "specialized", icon: "LayoutTemplate", hue: 290, description: "Design on-brand posters and social graphics from templates." },
   { slug: "favicon", title: "Favicon Generator", category: "specialized", icon: "Bookmark", hue: 75, description: "favicon.ico, every PNG size and the HTML snippet." },
   { slug: "screenshot", title: "Screenshot Tool", category: "specialized", icon: "MonitorSmartphone", hue: 215, description: "Crop, annotate and blur screenshots." },
   { slug: "base64", title: "Image to Base64", category: "developer", icon: "Binary", hue: 165, description: "Encode an image as a Base64 string or data URI." },
