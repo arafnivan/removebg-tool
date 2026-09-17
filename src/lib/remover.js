@@ -6,19 +6,6 @@
  * inference runs in a worker on this machine.
  */
 
-export const MODELS = {
-  isnet_fp16: {
-    label: "Precise",
-    hint: "Cleaner edges around hair, fur and fine detail.",
-  },
-  isnet_quint8: {
-    label: "Fast",
-    hint: "Quicker, and good for simple backgrounds.",
-  },
-};
-
-export const DEFAULT_MODEL = "isnet_fp16";
-
 const INPUT_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const INPUT_EXTENSIONS = /\.(jpe?g|png|webp)$/i;
 
@@ -97,7 +84,7 @@ export function cancelRemoval() {
 }
 
 /** Resolves with the cut-out as a PNG Blob. */
-export function removeImageBackground(file, model, onStage) {
+export function removeImageBackground(file, onStage) {
   // One job at a time — two concurrent inferences would each run at half speed.
   cancelRemoval();
 
@@ -140,6 +127,6 @@ export function removeImageBackground(file, model, onStage) {
     };
     target.addEventListener("message", onMessage);
     target.addEventListener("error", onError);
-    target.postMessage({ id, file, model });
+    target.postMessage({ id, file });
   });
 }

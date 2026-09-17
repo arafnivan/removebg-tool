@@ -3,8 +3,8 @@ import { Loader2, TriangleAlert, X } from "lucide-react";
 /**
  * Progress while a job runs, or the error from the last one.
  *
- * The first run spends most of its time fetching the model; that progress
- * drives the bar, but users only need to know the background is being removed.
+ * The bar shows real progress while it's available, then an animated bar;
+ * the label stays the same throughout.
  */
 export function StatusBar({ status, onCancel, onRetry }) {
   if (status.kind === "error") {

@@ -6,7 +6,7 @@
  * and the ONNX runtime are fetched once and stay loaded for the life of the
  * worker, so a second image skips straight to inference.
  *
- * Messages in:  { id, file, model }
+ * Messages in:  { id, file }
  * Messages out: { id, type: "progress", key, current, total }
  *               { id, type: "done", blob }
  *               { id, type: "error", message }
@@ -14,12 +14,15 @@
 
 import { removeBackground } from "@imgly/background-removal";
 
+// The most accurate model the library ships.
+const MODEL = "isnet_fp16";
+
 self.addEventListener("message", async (event) => {
-  const { id, file, model } = event.data;
+  const { id, file } = event.data;
 
   try {
     const blob = await removeBackground(file, {
-      model,
+      model: MODEL,
       device: "cpu",
       output: { format: "image/png" },
       progress: (key, current, total) => {

@@ -19,10 +19,6 @@ const FAQ = [
     a: "No. The image is processed on your own device and never sent to a server.",
   },
   {
-    q: "Which model should I choose?",
-    a: "Precise gives cleaner edges around hair, fur and fine detail. Fast finishes sooner and works well for simple backgrounds or older phones.",
-  },
-  {
     q: "Why is the PNG larger than my original JPG?",
     a: "Transparent images are saved as lossless PNG. Run the result through the Image Converter to get a WebP with the same transparency at a fraction of the size.",
   },

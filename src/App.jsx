@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { Download, Scissors, ShieldCheck, Sparkles, TriangleAlert, X } from "lucide-react";
-import { DEFAULT_MODEL, MODELS, isSupported } from "./lib/remover";
+import { isSupported } from "./lib/remover";
 import { downloadBlob, formatBytes, outputName } from "./lib/format";
 import { useBackgroundRemoval } from "./hooks/useBackgroundRemoval";
 import { SiteHeader } from "./components/SiteHeader";
@@ -10,7 +10,7 @@ import { SiteFooter } from "./components/SiteFooter";
 import { CurrentImage, Dropzone, usePageFileInput } from "./components/Dropzone";
 import { Comparison } from "./components/Comparison";
 import { StatusBar } from "./components/StatusBar";
-import { Panel, Segmented } from "./components/Panel";
+import { Panel } from "./components/Panel";
 
 const FEATURES = [
   { icon: Sparkles, title: "Automatic", body: "People, products, pets and objects are detected and cut out for you." },
@@ -18,16 +18,11 @@ const FEATURES = [
   { icon: ShieldCheck, title: "Private", body: "Your photo never leaves your device. No sign-up, no watermark." },
 ];
 
-const MODEL_OPTIONS = Object.entries(MODELS).map(([value, option]) => ({ value, label: option.label }));
-
 export default function App() {
   const { source, result, status, start, rerun, cancel, reset } = useBackgroundRemoval();
-  const [model, setModel] = useState(DEFAULT_MODEL);
   const [notice, setNotice] = useState(null);
 
   const running = status.kind === "running";
-  // The result was made with the other model and won't refresh on its own.
-  const stale = Boolean(result && result.model !== model && !running);
 
   const handleFile = useCallback(
     (file) => {
@@ -36,9 +31,9 @@ export default function App() {
         return;
       }
       setNotice(null);
-      void start(file, model);
+      void start(file);
     },
-    [start, model],
+    [start],
   );
   usePageFileInput(handleFile);
 
@@ -97,26 +92,12 @@ export default function App() {
             <div className="mx-auto grid w-full max-w-400 grid-cols-1 gap-5 px-4 py-5 pb-24 sm:px-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:px-8 lg:pb-5">
               <div className="min-w-0 space-y-3" aria-live="polite">
                 {noticeBox}
-                <StatusBar status={status} onCancel={cancel} onRetry={() => rerun(model)} />
+                <StatusBar status={status} onCancel={cancel} onRetry={rerun} />
                 <Comparison before={source} after={result} busy={running} />
               </div>
 
               <aside aria-label="Settings" className="min-w-0 space-y-4 lg:sticky lg:top-22 lg:self-start">
                 <CurrentImage image={source} onFile={handleFile} onClear={reset} />
-
-                <Panel title="Remove background" description="AI cut-out, processed on your device">
-                  <div className="space-y-1.5">
-                    <p className="text-[13px] font-medium text-muted-foreground">Model</p>
-                    <Segmented label="Model" value={model} options={MODEL_OPTIONS} onChange={setModel} />
-                    <p className="text-[11px] leading-relaxed text-muted-foreground">{MODELS[model].hint}</p>
-                  </div>
-                  {stale && (
-                    <button type="button" className="btn btn-default btn-md w-full" onClick={() => rerun(model)}>
-                      <Sparkles />
-                      Apply {MODELS[model].label.toLowerCase()} model
-                    </button>
-                  )}
-                </Panel>
 
                 <Panel title="Export">
                   <p className="text-[12px] leading-relaxed text-muted-foreground">

@@ -17,9 +17,8 @@ run in the browser.
 - **Free:** no account, no watermark, no usage limit, no paid API.
 - **Formats:** JPG, PNG and WebP in; transparent PNG out at the original resolution.
 - **Upload:** drag and drop, file picker, or paste with Ctrl/⌘ + V.
-- **Progress:** shows model download progress, then processing, with a cancel button.
+- **Progress:** a progress bar with a cancel button while the background is removed.
 - **Preview:** before/after slider, side by side, or result only, on a transparency checkerboard.
-- **Models:** "Precise" (about 80 MB) or "Fast" (about 40 MB). Either downloads once and is then cached.
 - **Looks like ImageDoctor:** same header, tool layout, colours and footer as the main site, with light, dark and system themes.
 - **Responsive:** works on phones, with the download button kept at the bottom of the screen.
 - **Stays responsive:** the model runs in a Web Worker, so the page doesn't freeze.
@@ -92,9 +91,6 @@ Asset URLs are relative, so the build also works from a sub-path.
 
 Notes:
 
-- `dist/assets/` contains a ~24 MB `.wasm` file from ONNX Runtime. That is
-  under Cloudflare Pages' 25 MiB per-file limit. Visitors don't download it;
-  the library loads its runtime from IMG.LY's CDN.
 - Files in `dist/assets/` have content hashes in their names, so they can be
   cached for a long time. Keep `index.html` uncached so new releases are
   picked up.
