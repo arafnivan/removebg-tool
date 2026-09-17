@@ -31,7 +31,10 @@ which runs an IS-Net segmentation model with ONNX Runtime Web.
 1. On the first use, the model and the ONNX Runtime binaries are downloaded
    from IMG.LY's CDN (`staticimgly.com`). The browser caches them.
 2. The image is decoded and segmented inside a Web Worker on your device.
-3. The resulting cut-out is shown on a checkerboard and can be saved as PNG.
+3. The mask is cleaned up (`src/lib/refine-mask.js`): faint background haze
+   and small stray patches are removed, the subject is made solid, and
+   background colour is taken out of soft edges such as hair and fur.
+4. The resulting cut-out is shown on a checkerboard and can be saved as PNG.
 
 Only the model files are fetched from the network. The image itself never
 leaves the browser.
@@ -123,6 +126,7 @@ src/
   lib/
     remover.js                 Worker client, progress, errors
     remover.worker.js          Runs @imgly/background-removal
+    refine-mask.js             Mask clean-up and edge colour correction
     format.js                  File size, file names, downloads
     theme.js                   Theme storage
     cn.js                      Class name helper
