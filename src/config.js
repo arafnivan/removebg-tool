@@ -27,7 +27,7 @@ export const LOGO_WIDTH = 991;
 export const LOGO_HEIGHT = 220;
 
 /** Shown in the footer's copyright notice. */
-export const COPYRIGHT = "© 2026 arafnivan";
+export const COPYRIGHT = "© 2026 ImageDoctor Background Remover";
 
 /** Licence files published with the site (see vite.config.js). */
 export const LICENSE_URL = "./LICENSE.txt";
