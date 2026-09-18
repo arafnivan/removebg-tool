@@ -51,7 +51,7 @@ const isNetworkError = (message) => /fetch|network|resource metadata|not found/i
 function friendlyError(message) {
   const lower = message.toLowerCase();
   if (isNetworkError(lower)) {
-    return new Error("Couldn't download the AI model. Check your internet connection and try again.");
+    return new Error("Couldn't initiate the AI model. Check your internet connection and try again.");
   }
   if (lower.includes("memory") || lower.includes("allocation") || lower.includes("bad_alloc")) {
     return new Error("Your browser ran out of memory. Try a smaller image, or close other tabs.");

@@ -33,7 +33,7 @@ export function StatusBar({ status, onCancel, onRetry }) {
   const download = status.stage?.phase === "download" ? status.stage : null;
   const percent = download?.total ? Math.min(100, Math.floor((download.loaded / download.total) * 100)) : null;
   const label = download
-    ? `Downloading AI model (one-time${download.total ? `, ${megabytes(download.total)}` : " download"})…`
+    ? `Initiating AI model (one-time${download.total ? `, ${megabytes(download.total)}` : " download"})…`
     : "Removing background…";
 
   return (
@@ -52,7 +52,7 @@ export function StatusBar({ status, onCancel, onRetry }) {
         <div
           className="relative h-1.5 w-full overflow-hidden rounded-full bg-primary/15"
           role="progressbar"
-          aria-label={download ? "AI model download" : "Background removal"}
+          aria-label={download ? "AI initiated" : "Background removal"}
           aria-valuemin={percent === null ? undefined : 0}
           aria-valuemax={percent === null ? undefined : 100}
           aria-valuenow={percent ?? undefined}
