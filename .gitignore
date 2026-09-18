@@ -6,3 +6,6 @@ dist/
 !.vscode/extensions.json
 .idea/
 npm-debug.log*
+
+.vercel
+.env*
